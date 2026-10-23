@@ -33,6 +33,7 @@ export type OnboardFlags = {
   bluesky?: string;
   youtube?: string;
   bioguide?: string;
+  chamber?: "house" | "senate";
   fec?: string;
   congress?: number;
   senateSession?: number;
@@ -299,6 +300,7 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
   let bluesky = flags.bluesky;
   let youtube = flags.youtube;
   let bioguide = flags.bioguide;
+  let chamber = flags.chamber;
   let fec = flags.fec;
   let congress = flags.congress;
   let senateSession = flags.senateSession;
@@ -331,6 +333,18 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
       "Official record IDs (optional)",
     );
     bioguide = bioguide || value(await p.text({ message: "Bioguide ID", placeholder: "A000370" }));
+    if (bioguide && !chamber) {
+      chamber = value(
+        await p.select({
+          message: "Chamber",
+          options: [
+            { value: "house", label: "House" },
+            { value: "senate", label: "Senate" },
+          ],
+          initialValue: "house",
+        }),
+      ) as "house" | "senate";
+    }
     fec = fec || value(await p.text({ message: "FEC candidate ID", placeholder: "H8NY15148" }));
     const c = value(await p.text({ message: "Congress number", placeholder: "119", defaultValue: "119", initialValue: "119" }));
     congress = congress ?? (Number(c) || 119);
@@ -367,6 +381,7 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
       congress: bioguide ? congress : undefined,
       senateSession: bioguide ? senateSession : undefined,
       state: state?.toUpperCase() || undefined,
+      chamber: bioguide ? chamber ?? "house" : undefined,
     },
   };
 

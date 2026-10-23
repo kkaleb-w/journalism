@@ -35,7 +35,7 @@ SECTION DEFINITIONS (use exactly these strings)
 - "What they say": posts, press releases and direct statements the person published.
 - "What they do": votes cast, bills introduced, official actions taken.
 - "Money": campaign disbursements, amounts paid, payees.
-- "Speeches": content from transcripts of recorded remarks or events. Never put a short social post here.
+- "Speeches": only records marked "Transcript: yes". Never put a short social post or a video with no transcript here; a video without a transcript belongs under "What they do" as an appearance.
 - "Record gaps": a factual note that a record is missing or contradictory, only when the records show it.
 
 Return JSON only, matching:
@@ -69,7 +69,13 @@ function recordsBlock(events: PrimaryEvent[]): string {
   return events
     .map((ev, i) => {
       const date = ev.publishedAt.slice(0, 10);
-      return `[${i + 1}] ${date} · ${ev.sourceLabel} · ${ev.title}\nURL: ${ev.url}\n${truncate(ev.text, 3000)}`;
+      const transcript =
+        ev.sourceType === "speech"
+          ? ev.meta?.hasTranscript === true
+            ? "Transcript: yes"
+            : "Transcript: no (title and description only)"
+          : "";
+      return `[${i + 1}] ${date} · ${ev.sourceLabel} · ${ev.title}${transcript ? `\n${transcript}` : ""}\nURL: ${ev.url}\n${truncate(ev.text, 3000)}`;
     })
     .join("\n\n---\n\n");
 }
@@ -208,9 +214,9 @@ function appendUnderHeading(file: string, heading: string, block: string): void 
   const after = idx + marker.length;
   const next = text.indexOf("\n## ", after);
   if (next === -1) {
-    text = text.trimEnd() + `\n${block}`;
+    text = text.trimEnd() + `\n\n${block}`;
   } else {
-    text = text.slice(0, next).trimEnd() + `\n${block}\n` + text.slice(next);
+    text = text.slice(0, next).trimEnd() + `\n\n${block}\n` + text.slice(next);
   }
   fs.writeFileSync(file, text);
 }
@@ -218,10 +224,24 @@ function appendUnderHeading(file: string, heading: string, block: string): void 
 function appendTimeline(vault: string, date: string, line: string): void {
   const month = date.slice(0, 7);
   const file = path.join(vault, "Timeline", `${month}.md`);
-  if (!fs.existsSync(file)) {
-    fs.writeFileSync(file, `# ${month}\n\n`);
+  const existing = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : `# ${month}\n\n`;
+  const entries = new Map<string, string[]>();
+  for (const chunk of existing.split(/^## /gm).slice(1)) {
+    const [head, ...rest] = chunk.split("\n");
+    const day = head.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    const bullets = rest
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith("- "));
+    entries.set(day, [...(entries.get(day) ?? []), ...bullets]);
   }
-  fs.appendFileSync(file, `## ${date}\n\n- ${line}\n\n`);
+  entries.set(date, [...(entries.get(date) ?? []), `- ${line}`]);
+  const body = [...entries.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([day, bullets]) => `## ${day}\n\n${[...new Set(bullets)].join("\n")}\n`)
+    .join("\n");
+  fs.writeFileSync(file, `# ${month}\n\n${body}`);
+
   const root = path.join(vault, "Timeline.md");
   const label = new Date(`${month}-01T00:00:00Z`).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
   const rootText = fs.readFileSync(root, "utf8");

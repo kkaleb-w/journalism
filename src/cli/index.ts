@@ -26,6 +26,7 @@ import { scaffoldVault, ensureVaultDirs } from "../vault/vault.js";
 import { fetchYouTubeTranscript, resolveYouTubeChannelId, transcribeUrl, downloadYouTubeAudio } from "../sources/youtube.js";
 import { downloadToTmp, transcribeAudioLong, transcribeFile } from "../core/transcribe.js";
 import { isOfficialDomain, truncate } from "../core/util.js";
+import { exportSite } from "../core/site.js";
 
 const program = new Command();
 
@@ -50,6 +51,7 @@ program
   .option("--bluesky <handle>", "Bluesky handle")
   .option("--youtube <url|handle|id>", "YouTube channel")
   .option("--bioguide <id>", "Bioguide ID")
+  .option("--chamber <chamber>", "house or senate")
   .option("--fec <id>", "FEC candidate ID")
   .option("--congress <n>", "Congress number", (v) => Number(v), 119)
   .option("--senate-session <n>", "Senate session", (v) => Number(v), 2)
@@ -79,6 +81,7 @@ program
       bluesky: opts.bluesky,
       youtube: opts.youtube,
       bioguide: opts.bioguide,
+      chamber: opts.chamber,
       fec: opts.fec,
       congress: opts.congress,
       senateSession: opts.senateSession,
@@ -251,6 +254,16 @@ program
   .description("check install, provider, vault and sources")
   .action(async () => {
     process.exitCode = await doctor();
+  });
+
+program
+  .command("export")
+  .description("build a static, readable HTML site from the vault")
+  .option("--out <dir>", "output directory", "./journalism-site")
+  .action((opts) => {
+    const config = requireConfigOrExit();
+    const result = exportSite(config, opts.out);
+    console.log(chalk.green(`Wrote ${result.file} (${result.records} records)`));
   });
 
 program

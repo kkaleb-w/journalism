@@ -75,6 +75,7 @@ const ConfigSchema = z.object({
       congress: z.number().optional(),
       senateSession: z.number().optional(),
       state: z.string().optional(),
+      chamber: z.enum(["house", "senate"]).optional(),
     }),
   }),
   provider: z.object({
@@ -192,11 +193,11 @@ export function defaultSources(poi: Config["poi"]): Config["sources"] {
     youtube: { enabled: Boolean(poi.handles.youtubeChannelId), intervalMinutes: 120 },
     congress: { enabled: Boolean(poi.ids.bioguide), intervalMinutes: 720 },
     "senate-votes": {
-      enabled: Boolean(poi.ids.bioguide && poi.ids.congress),
+      enabled: Boolean(poi.ids.bioguide && poi.ids.congress && poi.ids.chamber === "senate"),
       intervalMinutes: 360,
     },
     "house-votes": {
-      enabled: Boolean(poi.ids.bioguide && poi.ids.congress),
+      enabled: Boolean(poi.ids.bioguide && poi.ids.congress && poi.ids.chamber !== "senate"),
       intervalMinutes: 360,
     },
     fec: { enabled: Boolean(poi.ids.fecCandidateId), intervalMinutes: 1440 },

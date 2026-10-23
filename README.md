@@ -5,9 +5,11 @@ A terminal agent that keeps a file on one political person of interest, using **
 No news. No aggregators. No pundits. No "sources say". Every line in the vault links back to the exact record it came from.
 
 ```bash
-npm install -g journalism-cli
+npm install -g github:kkaleb-w/journalism
 journalism
 ```
+
+The npm registry release is pending; the GitHub install is the same build. A live demo of the generated file is at **[journalism.kkaleb.com](https://journalism.kkaleb.com)**.
 
 The first run walks you through onboarding, builds an Obsidian vault, installs a background service, and starts collecting.
 

@@ -70,6 +70,7 @@ export type PoiConfig = {
     congress?: number;
     senateSession?: number;
     state?: string;
+    chamber?: "house" | "senate";
   };
 };
 
