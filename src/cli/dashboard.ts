@@ -523,7 +523,11 @@ class Dashboard {
     lines.push(...bodyLines.slice(0, body));
 
     lines.push(border("+", "-", "+"));
-    lines.push("|" + pad(" TAB / SHIFT-TAB  SWITCH   UP/DOWN  MOVE   ENTER  OPEN / RUN   LEFT/RIGHT  COLLAPSE / ADJUST   Q  QUIT", this.w - 2) + "|");
+    const help =
+      this.w < 100
+        ? " TAB SWITCH   ARROWS MOVE   ENTER OPEN   Q QUIT"
+        : " TAB / SHIFT-TAB  SWITCH   UP/DOWN  MOVE   ENTER  OPEN / RUN   LEFT/RIGHT  COLLAPSE / ADJUST   Q  QUIT";
+    lines.push("|" + pad(help, this.w - 2) + "|");
     const status = this.editing
       ? ` ${this.editing.label}: ${this.editing.buffer}_   (ENTER SAVE, ESC CANCEL)`
       : this.busy
