@@ -1,0 +1,45 @@
+{
+  "name": "journalism-cli",
+  "version": "0.1.0",
+  "description": "A terminal-native research agent that tracks one political person of interest using only primary sources: their own posts, votes, speeches and money.",
+  "type": "module",
+  "bin": {
+    "journalism": "dist/cli/index.js"
+  },
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli/index.ts",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "journalism",
+    "research",
+    "agent",
+    "obsidian",
+    "primary-sources",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^1.8.1",
+    "chalk": "^6.0.1",
+    "commander": "^15.0.0",
+    "youtube-transcript": "^1.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

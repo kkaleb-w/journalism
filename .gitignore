@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.journalism/
+*.log
+.DS_Store
+test-tmp/
+coverage/
+*.tgz
