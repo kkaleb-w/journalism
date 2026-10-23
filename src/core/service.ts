@@ -19,6 +19,35 @@ export function installService(config: Config): { ok: boolean; message: string; 
   return { ok: false, message: `Auto-start is not implemented for ${platform}. Run \`journalism start\` manually.` };
 }
 
+export function restartAgent(): string {
+  if (process.platform === "linux") {
+    try {
+      execFileSync("systemctl", ["--user", "restart", "journalism.service"], { stdio: "pipe" });
+      return "agent restarted";
+    } catch (err) {
+      return `restart failed: ${err instanceof Error ? err.message : String(err)}. Run \`journalism start\` instead.`;
+    }
+  }
+  if (process.platform === "darwin") {
+    try {
+      execFileSync("launchctl", ["kickstart", "-k", `gui/${process.getuid?.() ?? 501}/com.journalism.agent`], { stdio: "pipe" });
+      return "agent restarted";
+    } catch (err) {
+      return `restart failed: ${err instanceof Error ? err.message : String(err)}`;
+    }
+  }
+  if (process.platform === "win32") {
+    try {
+      execFileSync("schtasks", ["/End", "/TN", "journalism"], { stdio: "pipe" });
+      execFileSync("schtasks", ["/Run", "/TN", "journalism"], { stdio: "pipe" });
+      return "agent restarted";
+    } catch (err) {
+      return `restart failed: ${err instanceof Error ? err.message : String(err)}`;
+    }
+  }
+  return "run `journalism start` to restart on this platform";
+}
+
 export function uninstallService(): { ok: boolean; message: string } {
   if (process.platform === "linux") {
     try {

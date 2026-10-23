@@ -281,10 +281,9 @@ export async function digest(config: Config, hours = 24): Promise<string> {
   return body;
 }
 
-export async function ask(config: Config, question: string): Promise<string> {
-  const { loadEvents } = await import("./store.js");
-  const all = loadEvents().all;
-  if (!all.length) return "No records yet. Run `journalism start --once` to collect the first batch.";
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
+export function selectRecords(question: string, all: PrimaryEvent[], limit = 40): PrimaryEvent[] {
   const terms = tokenize(question);
   const scored = all
     .map((e) => {
@@ -300,9 +299,44 @@ export async function ask(config: Config, question: string): Promise<string> {
     })
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 40)
+    .slice(0, limit)
     .map((x) => x.e);
+  return scored;
+}
 
+export async function chatTurn(
+  config: Config,
+  question: string,
+  history: ChatTurn[],
+): Promise<{ text: string; sources: PrimaryEvent[] }> {
+  const { loadEvents } = await import("./store.js");
+  const all = loadEvents().all;
+  if (!all.length) {
+    return { text: "No records yet. Run a collection cycle from Settings first.", sources: [] };
+  }
+  const pool = selectRecords(question, all, 30);
+  const records = pool.length ? pool : all.slice(0, 20);
+  const res = await chat(
+    config.provider,
+    [
+      { role: "system", content: ANSWER_SYSTEM },
+      ...history.slice(-6).map((m) => ({ role: m.role, content: m.content })),
+      { role: "user", content: `QUESTION: ${question}\n\nRECORDS:\n\n${recordsBlock(records)}` },
+    ],
+    { maxTokens: 1500, temperature: 0.1 },
+  );
+  const cited = [...new Set([...res.text.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])))].filter(
+    (n) => n >= 1 && n <= records.length,
+  );
+  const sources = cited.length ? cited.slice(0, 8).map((n) => records[n - 1]) : records.slice(0, 4);
+  return { text: res.text, sources };
+}
+
+export async function ask(config: Config, question: string): Promise<string> {
+  const { loadEvents } = await import("./store.js");
+  const all = loadEvents().all;
+  if (!all.length) return "No records yet. Run `journalism start --once` to collect the first batch.";
+  const scored = selectRecords(question, all, 40);
   const pool = scored.length ? scored : all.slice(0, 25);
   const res = await chat(
     config.provider,

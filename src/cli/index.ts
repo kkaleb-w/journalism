@@ -18,7 +18,7 @@ import {
 import { loadEvents, ingestEvents, newEvent, invalidateCache } from "../core/store.js";
 import { ask, digest, synthesize } from "../core/memory.js";
 import { runCycle, runForeground, agentRunning, logLine } from "../core/agent.js";
-import { installService, uninstallService, serviceStatus } from "../core/service.js";
+import { installService, uninstallService, serviceStatus, restartAgent } from "../core/service.js";
 import { enabledSources, sourceById, sourceSummary, SOURCES } from "../sources/index.js";
 import { onboard } from "./onboard.js";
 import { doctor } from "./doctor.js";
@@ -27,6 +27,7 @@ import { fetchYouTubeTranscript, resolveYouTubeChannelId, transcribeUrl, downloa
 import { downloadToTmp, transcribeAudioLong, transcribeFile } from "../core/transcribe.js";
 import { isOfficialDomain, truncate } from "../core/util.js";
 import { exportSite } from "../core/site.js";
+import { dashboard } from "./dashboard.js";
 
 const program = new Command();
 
@@ -53,8 +54,8 @@ program
   .option("--bioguide <id>", "Bioguide ID")
   .option("--chamber <chamber>", "house or senate")
   .option("--fec <id>", "FEC candidate ID")
-  .option("--congress <n>", "Congress number", (v) => Number(v), 119)
-  .option("--senate-session <n>", "Senate session", (v) => Number(v), 2)
+  .option("--congress <n>", "Congress number", (v) => Number(v))
+  .option("--senate-session <n>", "Senate session", (v) => Number(v))
   .option("--state <code>", "state code for vote matching")
   .option("--rss <url>", "official RSS feed (repeatable)", (v, prev: string[]) => [...prev, v], [])
   .option("--provider <id>", "provider id (openai, anthropic, google, deepseek, ...)")
@@ -275,12 +276,22 @@ program
     console.log(config.vault);
   });
 
+program
+  .command("dashboard")
+  .description("open the tabbed terminal dashboard")
+  .action(async () => {
+    const config = requireConfigOrExit();
+    const action = await dashboard(config);
+    if (action === "onboard") await onboard({});
+  });
+
 program.action(async () => {
   if (!exists()) {
     await onboard({});
     return;
   }
-  renderStatus(loadConfig());
+  const action = await dashboard(loadConfig());
+  if (action === "onboard") await onboard({});
 });
 
 program.parseAsync(process.argv).catch((err) => {

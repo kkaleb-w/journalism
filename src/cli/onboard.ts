@@ -11,6 +11,7 @@ import {
   newConfig,
   saveConfig,
   ensureDirs,
+  tryLoadConfig,
 } from "../core/config.js";
 import { PROVIDERS, TRANSCRIPTION_PROVIDERS, providerById, transcriptionProviderById } from "../providers/catalog.js";
 import { listModels } from "../core/llm.js";
@@ -77,15 +78,13 @@ function defaultTranscriptionModel(providerId: string): string {
 }
 
 export async function onboard(flags: OnboardFlags): Promise<void> {
-  if (exists() && !flags.force) {
-    p.intro(chalk.bold("journalism"));
-    p.log.warn(`Config already exists at ${configPath()}. Use --force to redo onboarding.`);
-    p.outro("Nothing changed.");
-    return;
-  }
-
+  const existing = tryLoadConfig();
   ensureDirs();
   p.intro(chalk.bold("journalism") + chalk.dim(" — a primary-source agent for one political person"));
+
+  if (existing && !flags.yes) {
+    p.log.info("Existing config found. This run will walk every step again and replace it. The vault and collected records are kept.");
+  }
 
   if (!flags.yes) {
     p.note(
@@ -102,7 +101,7 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
   }
 
   // 1. vault
-  let vault = flags.vault;
+  let vault = flags.vault ?? existing?.vault;
   if (!vault) {
     if (flags.yes) vault = DEFAULT_VAULT;
     else {
@@ -120,7 +119,7 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
   fs.mkdirSync(vault, { recursive: true });
 
   // 2. provider
-  let providerId = flags.provider;
+  let providerId = flags.provider ?? existing?.provider.id;
   let provider = providerId ? providerById(providerId) : undefined;
   if (!provider) {
     if (flags.yes) {
@@ -155,7 +154,8 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
     );
   }
 
-  let apiKey: string = flags.apiKey ?? "";
+  let apiKey: string =
+    flags.apiKey ?? (existing && existing.provider.id === provider.id ? existing.provider.apiKey : "");
   if (!apiKey) {
     if (provider.id === "ollama" || provider.id === "lmstudio" || provider.id === "vllm") {
       apiKey = "local";
@@ -178,7 +178,7 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
   models = await listModels({ kind: provider.kind, baseUrl, apiKey });
   spin.stop(models.length ? `Connected. ${models.length} models available.` : "Could not list models. You can still type a model name.");
 
-  let model: string = flags.model ?? "";
+  let model: string = flags.model ?? (existing?.provider.id === provider.id ? existing.provider.model : "");
   if (!model) {
     if (flags.yes) {
       model = provider.defaultModel;
@@ -283,7 +283,7 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
   }
 
   // 4. person of interest
-  let name = flags.name;
+  let name = flags.name ?? existing?.poi.name;
   if (!name) {
     if (flags.yes) {
       p.cancel("--name is required with --yes");
@@ -292,20 +292,20 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
     name = value(await p.text({ message: "Who is the person of interest?", placeholder: "e.g. Alexandria Ocasio-Cortez" }));
   }
 
-  let role = flags.role;
-  let jurisdiction = flags.jurisdiction;
-  let party = flags.party;
-  let x = flags.x;
-  let truth = flags.truth;
-  let bluesky = flags.bluesky;
-  let youtube = flags.youtube;
-  let bioguide = flags.bioguide;
-  let chamber = flags.chamber;
-  let fec = flags.fec;
-  let congress = flags.congress;
-  let senateSession = flags.senateSession;
-  let state = flags.state;
-  let rss = flags.rss ?? [];
+  let role = flags.role ?? existing?.poi.role;
+  let jurisdiction = flags.jurisdiction ?? existing?.poi.jurisdiction;
+  let party = flags.party ?? existing?.poi.party;
+  let x = flags.x ?? existing?.poi.handles.x;
+  let truth = flags.truth ?? existing?.poi.handles.truth;
+  let bluesky = flags.bluesky ?? existing?.poi.handles.bluesky;
+  let youtube = flags.youtube ?? existing?.poi.handles.youtubeChannelId;
+  let bioguide = flags.bioguide ?? existing?.poi.ids.bioguide;
+  let chamber = flags.chamber ?? existing?.poi.ids.chamber;
+  let fec = flags.fec ?? existing?.poi.ids.fecCandidateId;
+  let congress = flags.congress ?? existing?.poi.ids.congress;
+  let senateSession = flags.senateSession ?? existing?.poi.ids.senateSession;
+  let state = flags.state ?? existing?.poi.ids.state;
+  let rss = flags.rss?.length ? flags.rss : existing?.poi.handles.rss ?? [];
 
   if (!flags.yes) {
     role = role || value(await p.text({ message: "Role or office (optional)", placeholder: "U.S. Senator, Governor, candidate" }));
@@ -405,6 +405,9 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
     if (process.env.CONGRESS_API_KEY) sourceOptions.congress = { apiKey: process.env.CONGRESS_API_KEY };
     if (process.env.FEC_API_KEY) sourceOptions.fec = { apiKey: process.env.FEC_API_KEY };
   }
+  for (const [id, opts] of Object.entries(existing?.sources ?? {})) {
+    if (!sourceOptions[id] && opts.options) sourceOptions[id] = { ...opts.options };
+  }
 
   const sources = defaultSources(poi);
   for (const [id, opts] of Object.entries(sourceOptions)) {
@@ -412,7 +415,7 @@ export async function onboard(flags: OnboardFlags): Promise<void> {
   }
 
   // 6. autostart
-  let autoStart = flags.autostart ?? true;
+  let autoStart = flags.autostart ?? existing?.agent.autoStart ?? true;
   if (flags.autostart === undefined && !flags.yes) {
     autoStart = value(
       await p.confirm({

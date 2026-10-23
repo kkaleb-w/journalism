@@ -70,7 +70,9 @@ Everything is stored in `~/.journalism/config.json` with mode `600`.
 ## Daily use
 
 ```bash
-journalism status                 # what is running, what came in, what is pending
+journalism                        # open the dashboard (files, PoI, talk, settings)
+journalism onboard                # run onboarding again, keeping the vault and records
+journalism status                 # plain status for scripts or narrow terminals
 journalism digest                 # one-page briefing for the last 24 hours
 journalism ask "What did they say about the bill?"
 journalism ingest <url-or-file>   # add one official document, speech or transcript
@@ -78,6 +80,13 @@ journalism sources                # list adapters
 journalism sources disable x      # turn one off
 journalism doctor                 # diagnose keys, vault, provider, service
 ```
+
+The dashboard is a full ASCII interface. `TAB` and `SHIFT-TAB` switch tabs, arrow keys move, `ENTER` opens or runs. The four tabs are:
+
+- **Files** — the vault tree and a live preview of the selected note.
+- **PoI** — identity, handles, record counts, source state, and the newest records.
+- **Talk** — ask the agent questions; answers are cited back to the records.
+- **Settings** — model, token budget, quiet hours, source toggles and cadence, provider check, agent restart, and re-onboarding.
 
 The agent runs continuously. Each source has its own interval and jitter. Conditional HTTP requests (`ETag` / `Last-Modified`) and per-record IDs mean a poll only costs what actually changed. The model is only called when new records arrive, not on a timer.
 
