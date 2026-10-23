@@ -1,6 +1,6 @@
 {
   "name": "journalism-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A terminal-native research agent that tracks one political person of interest using only primary sources: their own posts, votes, speeches and money.",
   "type": "module",
   "bin": {

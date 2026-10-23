@@ -4,7 +4,7 @@ import path from "node:path";
 import { z } from "zod";
 import type { AgentState, Config } from "./types.js";
 
-export const APP_VERSION = "0.1.0";
+export const APP_VERSION = "0.2.0";
 
 export function homeDir(): string {
   return process.env.JOURNALISM_HOME || path.join(os.homedir(), ".journalism");
