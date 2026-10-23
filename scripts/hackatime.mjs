@@ -37,6 +37,11 @@ function log(msg) {
 function apiKey() {
   if (process.env.HACKATIME_API_KEY) return process.env.HACKATIME_API_KEY.trim();
   try {
+    return fs.readFileSync(path.join(home, ".hackatime-key"), "utf8").trim();
+  } catch {
+    /* fall through */
+  }
+  try {
     const cfg = fs.readFileSync(path.join(home, ".wakatime.cfg"), "utf8");
     const m = cfg.match(/^\s*api_key\s*=\s*(.+)$/m);
     return m ? m[1].trim() : "";
